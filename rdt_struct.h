@@ -1,4 +1,12 @@
 /*
+ * @Description: 
+ * @Autor: Unknown
+ * @Date: Unknown
+ * @LastEditors: Weihang Shen
+ * @LastEditTime: 2022-02-20 21:10:44
+ */
+
+/*
  * FILE: rdt_struct.h
  * DESCRIPTION: The header file for basic data structures.
  * NOTE: Do not touch this file!
@@ -7,6 +15,8 @@
 
 #ifndef _RDT_STRUCT_H_
 #define _RDT_STRUCT_H_
+
+#include <stdint.h>
 
 /* sanity check utility */
 #define ASSERT(x) \
@@ -28,6 +38,13 @@ struct message {
 
 struct packet {
     char data[RDT_PKTSIZE];
+};
+
+#define WINDOW_SIZE 10
+
+enum FunctionCode
+{
+    PKT_ACK, PKT_LOST, NORMAL_MSG, NEW_MSG, END_MSG
 };
 
 #endif  /* _RDT_STRUCT_H_ */
