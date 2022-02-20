@@ -3,7 +3,7 @@
  * @Autor: Unknown
  * @Date: Unknown
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-20 23:12:42
+ * @LastEditTime: 2022-02-21 00:27:30
  */
 
 /*
@@ -36,9 +36,21 @@ static BufferArray buffer;
 static size_t window_start_id;
 static size_t window_end_id;
 
+void timeout(uint32_t pkt_id)
+{
+    if (pkt_id < window_start_id) return;
+    if (buffer[pkt_id].acked) return;
+
+    // did not receieve ack, resend
+    send(pkt_id);
+}
+
+static TimerArray timer_array(GetSimulationTime, Sender_StartTimer, Sender_StopTimer, timeout);
+
 inline void send(size_t pkt_id)
 {
     Sender_ToLowerLayer(buffer[pkt_id].get_packet());
+    timer_array.new_timer(pkt_id, RT_TIMEOUT);
 }
 
 inline FunctionCode get_fun_code(packet *pkt)
@@ -59,13 +71,6 @@ inline void fillup_window()
         send(++window_end_id);
     }
 }
-
-void timeout(uint32_t pkt_id)
-{
-
-}
-
-static TimerArray timer_array(GetSimulationTime, Sender_StartTimer, Sender_StopTimer, timeout);
 
 /* sender initialization, called once at the very beginning */
 void Sender_Init()

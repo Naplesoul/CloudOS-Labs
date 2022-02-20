@@ -3,7 +3,7 @@
  * @Autor: Unknown
  * @Date: Unknown
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-20 21:10:44
+ * @LastEditTime: 2022-02-21 00:24:35
  */
 
 /*
@@ -41,6 +41,7 @@ struct packet {
 };
 
 #define WINDOW_SIZE 10
+#define RT_TIMEOUT 0.3
 
 enum FunctionCode
 {
