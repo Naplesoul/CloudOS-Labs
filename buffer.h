@@ -3,7 +3,7 @@
  * @Autor: Weihang Shen
  * @Date: 2022-02-19 21:19:42
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-20 21:18:50
+ * @LastEditTime: 2022-02-21 00:32:07
  */
 
 #ifndef _BUFFER_H_
@@ -82,6 +82,7 @@ BufferEntry &BufferArray::front()
 
 void BufferArray::pop_front()
 {
+    delete buf.front().get_packet();
     buf.pop_front();
     ++start_idx;
 }
