@@ -1,21 +1,15 @@
 /*
  * @Description: 
  * @Autor: Weihang Shen
- * @Date: 2022-02-19 21:57:57
+ * @Date: 2022-02-22 14:23:05
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-20 17:05:53
+ * @LastEditTime: 2022-02-22 14:23:05
  */
-
-#ifndef _CHECKSUM_H_
-#define _CHECKSUM_H_
 
 #include <stdint.h>
 #include <stddef.h>
 
-#include "rdt_struct.h"
-
-#define CHECKSUM_SIZE 16
-#define BUFFER_SIZE (RDT_PKTSIZE - CHECKSUM_SIZE)
+#include "checksum.h"
 
 inline uint16_t checksum(char *buf)
 {
@@ -68,5 +62,3 @@ bool check(packet *packet)
 {
     return check_ok(packet->data, *(uint16_t *)(packet->data + BUFFER_SIZE));
 }
-
-#endif

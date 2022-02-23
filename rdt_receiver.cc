@@ -1,4 +1,12 @@
 /*
+ * @Description: 
+ * @Autor: Unknown
+ * @Date: Unknown
+ * @LastEditors: Weihang Shen
+ * @LastEditTime: 2022-02-23 12:00:33
+ */
+
+/*
  * FILE: rdt_receiver.cc
  * DESCRIPTION: Reliable data transfer receiver.
  * NOTE: This implementation assumes there is no packet loss, corruption, or 
@@ -17,15 +25,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <list>
 
 #include "rdt_struct.h"
 #include "rdt_receiver.h"
 
+#include "utils/buffer.h"
+#include "utils/checksum.h"
+
+static BufferArray integrated_buffer;
+static std::list<BufferEntry> seq_buffer;
 
 /* receiver initialization, called once at the very beginning */
 void Receiver_Init()
 {
     fprintf(stdout, "At %.2fs: receiver initializing ...\n", GetSimulationTime());
+    integrated_buffer.clear();
+    seq_buffer.clear();
 }
 
 /* receiver finalization, called once at the very end.
@@ -41,25 +57,88 @@ void Receiver_Final()
    receiver */
 void Receiver_FromLowerLayer(struct packet *pkt)
 {
-    /* 1-byte header indicating the size of the payload */
-    int header_size = 1;
+    if (!check(pkt)) {
+        return;
+    }
+    
+    BufferEntry entry(pkt);
+    uint32_t pkt_id = entry.get_packet_id();
 
-    /* construct a message and deliver to the upper layer */
-    struct message *msg = (struct message*) malloc(sizeof(struct message));
-    ASSERT(msg!=NULL);
+    BufferEntry ack_entry(false, pkt_id, PKT_ACK, 0, nullptr);
+    Receiver_ToLowerLayer(ack_entry.get_packet());
+    delete[] ack_entry.get_packet();
 
-    msg->size = pkt->data[0];
+    uint32_t next_integrated_id = integrated_buffer.size();
 
-    /* sanity check in case the packet is corrupted */
-    if (msg->size<0) msg->size=0;
-    if (msg->size>RDT_PKTSIZE-header_size) msg->size=RDT_PKTSIZE-header_size;
+    if (pkt_id < next_integrated_id) {
+        delete[] entry.get_packet();
+        return;
+    }
 
-    msg->data = (char*) malloc(msg->size);
-    ASSERT(msg->data!=NULL);
-    memcpy(msg->data, pkt->data+header_size, msg->size);
-    Receiver_ToUpperLayer(msg);
+    if (pkt_id != next_integrated_id) {
+        bool inserted = false;
+        for (auto it = seq_buffer.begin(); it != seq_buffer.end(); ++it) {
+            if (it->get_packet_id() > pkt_id) {
+                seq_buffer.insert(it, entry);
+                inserted = true;
+                break;
+            } else if (it->get_packet_id() == pkt_id) {
+                delete[] entry.get_packet();
+                return;
+            }
+        }
+        if (!inserted) seq_buffer.push_back(entry);
+        return;
+    }
 
-    /* don't forget to free the space */
-    if (msg->data!=NULL) free(msg->data);
-    if (msg!=NULL) free(msg);
+    integrated_buffer.push_back(entry);
+    next_integrated_id++;
+
+    while (seq_buffer.size() > 0
+        && seq_buffer.front().get_packet_id() == next_integrated_id) {
+                
+        integrated_buffer.push_back(seq_buffer.front());
+        seq_buffer.pop_front();
+        next_integrated_id++;
+    }
+
+    if (integrated_buffer.queue_size() == 0) return;
+
+    uint32_t last_end_id = integrated_buffer.front().get_packet_id();
+    for (auto it = integrated_buffer.begin(); it != integrated_buffer.end(); ++it) {
+        if (it->get_fun_code() == NEW_MSG) {
+            message msg;
+            uint32_t size = 0;
+
+            auto msg_end = it + 1;
+            bool msg_ended = false;
+            for (; msg_end != integrated_buffer.end(); ++msg_end) {
+                if (msg_end->get_fun_code() == END_MSG) {
+                    last_end_id = it->get_packet_id();
+                    msg_ended = true;
+                    break;
+                } else if (msg_end->get_fun_code() == NORMAL_MSG) {
+                    size += msg_end->get_pld_size();
+                } else {
+                    ASSERT(false);
+                }
+            }
+            if (!msg_ended) break;
+
+            msg.data = new char[size];
+            msg.size = size;
+            size = 0;
+            for (auto msg_part = it + 1; msg_part != msg_end; ++msg_part) {
+                memcpy(msg.data + size, pkt->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, msg_part->get_pld_size());
+                size += msg_part->get_pld_size();
+            }
+
+            fprintf(stdout, "At %.2fs: receiver assembled a complete msg ...\n", GetSimulationTime());
+            Receiver_ToUpperLayer(&msg);
+            delete[] msg.data;
+            it = msg_end;
+        }
+    }
+    
+    integrated_buffer.erase_before(last_end_id);
 }

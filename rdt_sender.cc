@@ -3,7 +3,7 @@
  * @Autor: Unknown
  * @Date: Unknown
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-21 00:27:30
+ * @LastEditTime: 2022-02-23 00:53:57
  */
 
 /*
@@ -28,13 +28,15 @@
 #include "rdt_struct.h"
 #include "rdt_sender.h"
 
-#include "buffer.h"
-#include "checksum.h"
-#include "timer.h"
+#include "utils/buffer.h"
+#include "utils/checksum.h"
+#include "utils/timer.h"
 
 static BufferArray buffer;
-static size_t window_start_id;
-static size_t window_end_id;
+static int64_t window_start_id;
+static int64_t window_end_id;
+
+inline void send(size_t pkt_id);
 
 void timeout(uint32_t pkt_id)
 {
@@ -49,6 +51,7 @@ static TimerArray timer_array(GetSimulationTime, Sender_StartTimer, Sender_StopT
 
 inline void send(size_t pkt_id)
 {
+    fprintf(stdout, "At %.2fs: sender sending pkt %lu ...\n", GetSimulationTime(), pkt_id);
     Sender_ToLowerLayer(buffer[pkt_id].get_packet());
     timer_array.new_timer(pkt_id, RT_TIMEOUT);
 }
@@ -66,15 +69,18 @@ inline uint32_t get_pkt_id(packet *pkt)
 
 inline void fillup_window()
 {
-    while (window_end_id - window_start_id < WINDOW_SIZE - 1
-        && window_end_id < buffer.size() - 1) {
-        send(++window_end_id);
+    while ((window_end_id - window_start_id < WINDOW_SIZE - 1)
+        && (window_end_id + 1 < buffer.size())) {
+        ++window_end_id;
+        send(window_end_id);
     }
 }
 
 /* sender initialization, called once at the very beginning */
 void Sender_Init()
 {
+    window_start_id = -1;
+    window_end_id = -1;
     fprintf(stdout, "At %.2fs: sender initializing ...\n", GetSimulationTime());
 }
 
@@ -91,6 +97,7 @@ void Sender_Final()
    sender */
 void Sender_FromUpperLayer(struct message *msg)
 {
+    fprintf(stdout, "At %.2fs: sender received a msg ...\n", GetSimulationTime());
     uint32_t pkt_num = msg->size / PLDSIZE_MAX;
     uint32_t pkt_id = buffer.size();
     
@@ -118,19 +125,29 @@ void Sender_FromUpperLayer(struct message *msg)
    sender */
 void Sender_FromLowerLayer(struct packet *pkt)
 {   
+    if (!check(pkt)) {
+        fprintf(stdout, "At %.2fs: sender received a broken pkt ... ", GetSimulationTime());
+        return;
+    }
+
     FunctionCode fun_code = get_fun_code(pkt);
     uint32_t pkt_id = get_pkt_id(pkt);
-
+    fprintf(stdout, "At %.2fs: sender received a pkt from receiver ... ", GetSimulationTime());
     if (fun_code == PKT_ACK) {
+        fprintf(stdout, "It's an ACK for pkt %d\n", pkt_id);
         buffer[pkt_id].acked = true;
         while (buffer.front().acked) {
             window_start_id = buffer.front().get_packet_id() + 1;
+            fprintf(stdout, "At %.2fs: sender increase window_start_id to %lld ...\n", GetSimulationTime(), window_start_id);
             buffer.pop_front();
         }
 
         fillup_window();
     } else if (fun_code == PKT_LOST) {
-        send(pkt_id);
+        fprintf(stdout, "It's an NAK\n");
+        timeout(pkt_id);
+    } else {
+        ASSERT(false);
     }
 }
 
