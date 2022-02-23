@@ -12,11 +12,15 @@ void TimerArray::unique_timer_timeout()
 {
     stop_timer();
 
+    if (timer_list.size() == 0) return;
+
     double current_time = get_current_time();
     auto &entry = timer_list.front();
     while (entry.timeout_time <= current_time) {
         pkt_timeout(entry.pkt_id);
         timer_list.pop_front();
+        
+        if (timer_list.size() == 0) break;
         entry = timer_list.front();
         current_time = get_current_time();
     }
