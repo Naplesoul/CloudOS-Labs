@@ -26,6 +26,7 @@ private:
     void (*pkt_timeout)(uint32_t pkt_id);
     
     std::list<TimerEntry> timer_list;
+    bool timer_started;
 
 public:
     TimerArray(double _get_time(), void _start_timer(double),
@@ -33,7 +34,8 @@ public:
         get_current_time(_get_time),
         start_timer(_start_timer),
         stop_timer(_stop_timer),
-        pkt_timeout(_pkt_timeout) {}
+        pkt_timeout(_pkt_timeout),
+        timer_started(false) {}
     
     void unique_timer_timeout();
     void new_timer(uint32_t pkt_id, double timeout);

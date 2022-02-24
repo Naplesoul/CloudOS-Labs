@@ -11,7 +11,7 @@
 
 #include "../rdt_struct.h"
 
-#define CHECKSUM_SIZE 16
+#define CHECKSUM_SIZE 2
 #define BUFFER_SIZE (RDT_PKTSIZE - CHECKSUM_SIZE)
 
 inline uint16_t checksum(char *buf);

@@ -35,11 +35,13 @@
 static BufferArray buffer;
 static int64_t window_start_id;
 static int64_t window_end_id;
+static size_t msg_count = 0;
 
 inline void send(size_t pkt_id);
 
 void timeout(uint32_t pkt_id)
 {
+    printf("At %.2fs: sender pkt %u timeout ...\n", GetSimulationTime(), pkt_id);
     if (pkt_id < window_start_id) return;
     if (buffer[pkt_id].acked) return;
 
@@ -52,6 +54,9 @@ static TimerArray timer_array(GetSimulationTime, Sender_StartTimer, Sender_StopT
 inline void send(size_t pkt_id)
 {
     fprintf(stdout, "At %.2fs: sender sending pkt %lu ...\n", GetSimulationTime(), pkt_id);
+    // for (int i = 0; i < buffer[pkt_id].get_pld_size(); ++i) {
+    //     printf("pld[%d] = %x\n", i, buffer[pkt_id].get_packet()->data[i + 6]);
+    // }
     Sender_ToLowerLayer(buffer[pkt_id].get_packet());
     timer_array.new_timer(pkt_id, RT_TIMEOUT);
 }
@@ -70,7 +75,7 @@ inline uint32_t get_pkt_id(packet *pkt)
 inline void fillup_window()
 {
     while ((window_end_id - window_start_id < WINDOW_SIZE - 1)
-        && (window_end_id + 1 < buffer.size())) {
+        && (window_end_id + 1 < (int64_t)buffer.size())) {
         ++window_end_id;
         send(window_end_id);
     }
@@ -97,7 +102,7 @@ void Sender_Final()
    sender */
 void Sender_FromUpperLayer(struct message *msg)
 {
-    fprintf(stdout, "At %.2fs: sender received a msg ...\n", GetSimulationTime());
+    fprintf(stdout, "At %.2fs: sender received msg %lu ...\n", GetSimulationTime(), msg_count++);
     uint32_t pkt_num = msg->size / PLDSIZE_MAX;
     uint32_t pkt_id = buffer.size();
     
@@ -133,12 +138,15 @@ void Sender_FromLowerLayer(struct packet *pkt)
     FunctionCode fun_code = get_fun_code(pkt);
     uint32_t pkt_id = get_pkt_id(pkt);
     fprintf(stdout, "At %.2fs: sender received a pkt from receiver ... ", GetSimulationTime());
+    
+    if (pkt_id < window_start_id || pkt_id > window_end_id) return;
+
     if (fun_code == PKT_ACK) {
-        fprintf(stdout, "It's an ACK for pkt %d\n", pkt_id);
+        fprintf(stdout, "It's an ACK for pkt %u\n", pkt_id);
         buffer[pkt_id].acked = true;
-        while (buffer.front().acked) {
+        while (buffer.queue_size() > 0 && buffer.front().acked) {
             window_start_id = buffer.front().get_packet_id() + 1;
-            fprintf(stdout, "At %.2fs: sender increase window_start_id to %lld ...\n", GetSimulationTime(), window_start_id);
+            fprintf(stdout, "At %.2fs: sender increase window_start_id to %ld ...\n", GetSimulationTime(), window_start_id);
             buffer.pop_front();
         }
 

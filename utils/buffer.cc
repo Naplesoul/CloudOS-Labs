@@ -6,6 +6,10 @@
  * @LastEditTime: 2022-02-23 00:54:12
  */
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "buffer.h"
 #include "checksum.h"
 
@@ -53,7 +57,7 @@ uint8_t BufferEntry::get_pld_size()
 
 BufferEntry &BufferArray::operator[](size_t idx)
 {
-    assert(idx >= start_idx);
+    ASSERT(idx >= start_idx);
     return buf[idx - start_idx];
 }
 
@@ -69,7 +73,7 @@ BufferEntry &BufferArray::back()
 
 void BufferArray::pop_front()
 {
-    // delete buf.front().get_packet();
+    delete buf.front().get_packet();
     buf.pop_front();
     ++start_idx;
 }

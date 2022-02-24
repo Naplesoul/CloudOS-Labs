@@ -35,6 +35,7 @@
 
 static BufferArray integrated_buffer;
 static std::list<BufferEntry> seq_buffer;
+static size_t msg_count = 0;
 
 /* receiver initialization, called once at the very beginning */
 void Receiver_Init()
@@ -111,10 +112,12 @@ void Receiver_FromLowerLayer(struct packet *pkt)
             uint32_t size = 0;
 
             auto msg_end = it + 1;
+            if (msg_end == integrated_buffer.end()) break;
+
             bool msg_ended = false;
             for (; msg_end != integrated_buffer.end(); ++msg_end) {
                 if (msg_end->get_fun_code() == END_MSG) {
-                    last_end_id = it->get_packet_id();
+                    last_end_id = msg_end->get_packet_id();
                     msg_ended = true;
                     break;
                 } else if (msg_end->get_fun_code() == NORMAL_MSG) {
@@ -129,11 +132,11 @@ void Receiver_FromLowerLayer(struct packet *pkt)
             msg.size = size;
             size = 0;
             for (auto msg_part = it + 1; msg_part != msg_end; ++msg_part) {
-                memcpy(msg.data + size, pkt->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, msg_part->get_pld_size());
+                memcpy(msg.data + size, msg_part->get_packet()->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, msg_part->get_pld_size());
                 size += msg_part->get_pld_size();
             }
 
-            fprintf(stdout, "At %.2fs: receiver assembled a complete msg ...\n", GetSimulationTime());
+            fprintf(stdout, "At %.2fs: receiver assembled msg %lu ...\n", GetSimulationTime(), msg_count++);
             Receiver_ToUpperLayer(&msg);
             delete[] msg.data;
             it = msg_end;

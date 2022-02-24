@@ -11,6 +11,7 @@
 
 #include <deque>
 #include "../rdt_struct.h"
+#include "checksum.h"
 
 #define PKTID_SIZE 4
 #define FUNCODE_SIZE 1
