@@ -35,6 +35,7 @@
 static BufferArray integrated_buffer;
 static std::list<BufferEntry> seq_buffer;
 static size_t msg_count;
+static size_t last_end_id = 0;
 
 /* receiver initialization, called once at the very beginning */
 void Receiver_Init()
@@ -88,12 +89,19 @@ void Receiver_FromLowerLayer(struct packet *pkt)
         return;
     }
 
+    if (entry.get_fun_code() == END_MSG) {
+        last_end_id = pkt_id;
+    }
     integrated_buffer.push_back(entry);
     next_integrated_id++;
 
     while (seq_buffer.size() > 0
         && seq_buffer.front().get_packet_id() == next_integrated_id) {
-                
+        
+        if (seq_buffer.front().get_fun_code() == END_MSG) {
+            last_end_id = seq_buffer.front().get_packet_id();
+        }
+
         integrated_buffer.push_back(seq_buffer.front());
         seq_buffer.pop_front();
         next_integrated_id++;
@@ -101,7 +109,8 @@ void Receiver_FromLowerLayer(struct packet *pkt)
 
     if (integrated_buffer.queue_size() == 0) return;
 
-    uint32_t last_end_id = integrated_buffer.front().get_packet_id();
+    if (last_end_id < integrated_buffer.front().get_packet_id()) return;
+
     for (auto it = integrated_buffer.begin(); it != integrated_buffer.end(); ++it) {
         if (it->get_fun_code() == NEW_MSG) {
             message msg;
@@ -113,7 +122,6 @@ void Receiver_FromLowerLayer(struct packet *pkt)
             bool msg_ended = false;
             for (; msg_end != integrated_buffer.end(); ++msg_end) {
                 if (msg_end->get_fun_code() == END_MSG) {
-                    last_end_id = msg_end->get_packet_id();
                     msg_ended = true;
                     break;
                 } else if (msg_end->get_fun_code() == NORMAL_MSG) {
