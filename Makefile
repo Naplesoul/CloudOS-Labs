@@ -28,4 +28,4 @@ rdt_sim: rdt_sim.o rdt_sender.o rdt_receiver.o utils/buffer.o utils/checksum.o u
 	g++ $(LDFLAGS) -o $@ $^
 
 clean:
-	rm -f *~ *.o utils/*.o $(TARGETS)
+	rm -f *~ *.o utils/*.o tmp.txt $(TARGETS)
