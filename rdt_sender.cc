@@ -35,17 +35,17 @@
 static BufferArray buffer;
 static int64_t window_start_id;
 static int64_t window_end_id;
-static size_t msg_count = 0;
+static size_t msg_count;
 
 inline void send(size_t pkt_id);
 
 void timeout(uint32_t pkt_id)
 {
-    printf("At %.2fs: sender pkt %u timeout ...\n", GetSimulationTime(), pkt_id);
     if (pkt_id < window_start_id) return;
     if (buffer[pkt_id].acked) return;
 
     // did not receieve ack, resend
+    printf("At %.2fs: sender pkt %u timeout ...\n", GetSimulationTime(), pkt_id);
     send(pkt_id);
 }
 
@@ -54,9 +54,6 @@ static TimerArray timer_array(GetSimulationTime, Sender_StartTimer, Sender_StopT
 inline void send(size_t pkt_id)
 {
     fprintf(stdout, "At %.2fs: sender sending pkt %lu ...\n", GetSimulationTime(), pkt_id);
-    // for (int i = 0; i < buffer[pkt_id].get_pld_size(); ++i) {
-    //     printf("pld[%d] = %x\n", i, buffer[pkt_id].get_packet()->data[i + 6]);
-    // }
     Sender_ToLowerLayer(buffer[pkt_id].get_packet());
     timer_array.new_timer(pkt_id, RT_TIMEOUT);
 }
@@ -84,9 +81,11 @@ inline void fillup_window()
 /* sender initialization, called once at the very beginning */
 void Sender_Init()
 {
+    fprintf(stdout, "At %.2fs: sender initializing ...\n", GetSimulationTime());
+    buffer.clear();
     window_start_id = -1;
     window_end_id = -1;
-    fprintf(stdout, "At %.2fs: sender initializing ...\n", GetSimulationTime());
+    msg_count = 0;
 }
 
 /* sender finalization, called once at the very end.
@@ -96,6 +95,9 @@ void Sender_Init()
 void Sender_Final()
 {
     fprintf(stdout, "At %.2fs: sender finalizing ...\n", GetSimulationTime());
+    window_start_id = -1;
+    window_end_id = -1;
+    msg_count = 0;
 }
 
 /* event handler, called when a message is passed from the upper layer at the 

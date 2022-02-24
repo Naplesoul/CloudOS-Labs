@@ -14,14 +14,14 @@
 #include "checksum.h"
 
 BufferEntry::BufferEntry(bool _acked, uint32_t _pkt_id, FunctionCode _fun_code, uint8_t _pld_size, char *pld):
-    acked(_acked), pld_size(_pld_size), fun_code(_fun_code), pkt_id(_pkt_id), pkt(new packet)
+    acked(_acked), pld_size(_pld_size), fun_code(_fun_code), pkt_id(_pkt_id), pkt(std::make_shared<packet>())
 {
     *(uint32_t *)(pkt->data) = _pkt_id;
     *(uint8_t *)(pkt->data + PKTID_SIZE) = _fun_code;
     *(uint8_t *)(pkt->data + PKTID_SIZE + FUNCODE_SIZE) = _pld_size;
     if (_pld_size > 0)
         memcpy(pkt->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, pld, _pld_size);
-    sign(pkt);
+    sign(pkt.get());
 }
 
 BufferEntry::BufferEntry(packet *_pkt)
@@ -30,13 +30,13 @@ BufferEntry::BufferEntry(packet *_pkt)
     pld_size = *(uint8_t *)(_pkt->data + PKTID_SIZE + FUNCODE_SIZE);
     fun_code = (FunctionCode)(*(uint8_t *)(_pkt->data + PKTID_SIZE));
     pkt_id = *(uint32_t *)(_pkt->data);
-    pkt = new packet;
+    pkt = std::make_shared<packet>();
     memcpy(pkt->data, _pkt->data, RDT_PKTSIZE);
 }
 
 packet *BufferEntry::get_packet()
 {
-    return pkt;
+    return pkt.get();
 }
 
 uint32_t BufferEntry::get_packet_id()
@@ -73,7 +73,6 @@ BufferEntry &BufferArray::back()
 
 void BufferArray::pop_front()
 {
-    delete buf.front().get_packet();
     buf.pop_front();
     ++start_idx;
 }

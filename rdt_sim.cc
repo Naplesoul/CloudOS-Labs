@@ -208,7 +208,6 @@ static struct message *generate_msg()
 
     for (int i=0; i<msg->size; i+=1) {
 	msg->data[i] = '0' + cnt;
-    // printf("msg data[%d] = %x\n", i, '0' + cnt);
 	cnt = (cnt+1) % 10;
     }
 
@@ -337,7 +336,6 @@ void Receiver_ToUpperLayer(struct message *msg)
     for (int i=0; i<msg->size; i++) {
 	/* message verification */
 	if (msg->data[i] != '0' + cnt) {
-        // printf("msg data[%d] = %x not ok\n", i, msg->data[i]);
 	    message_verfication_passed = false;
 	}
 	cnt = (cnt+1) % 10;

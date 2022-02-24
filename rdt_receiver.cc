@@ -21,7 +21,6 @@
  *       (excluding this single-byte header)
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +34,7 @@
 
 static BufferArray integrated_buffer;
 static std::list<BufferEntry> seq_buffer;
-static size_t msg_count = 0;
+static size_t msg_count;
 
 /* receiver initialization, called once at the very beginning */
 void Receiver_Init()
@@ -43,6 +42,7 @@ void Receiver_Init()
     fprintf(stdout, "At %.2fs: receiver initializing ...\n", GetSimulationTime());
     integrated_buffer.clear();
     seq_buffer.clear();
+    msg_count = 0;
 }
 
 /* receiver finalization, called once at the very end.
@@ -52,6 +52,9 @@ void Receiver_Init()
 void Receiver_Final()
 {
     fprintf(stdout, "At %.2fs: receiver finalizing ...\n", GetSimulationTime());
+    integrated_buffer.clear();
+    seq_buffer.clear();
+    msg_count = 0;
 }
 
 /* event handler, called when a packet is passed from the lower layer at the 
@@ -67,14 +70,10 @@ void Receiver_FromLowerLayer(struct packet *pkt)
 
     BufferEntry ack_entry(false, pkt_id, PKT_ACK, 0, nullptr);
     Receiver_ToLowerLayer(ack_entry.get_packet());
-    delete[] ack_entry.get_packet();
 
     uint32_t next_integrated_id = integrated_buffer.size();
 
-    if (pkt_id < next_integrated_id) {
-        delete[] entry.get_packet();
-        return;
-    }
+    if (pkt_id < next_integrated_id) return;
 
     if (pkt_id != next_integrated_id) {
         bool inserted = false;
@@ -83,10 +82,7 @@ void Receiver_FromLowerLayer(struct packet *pkt)
                 seq_buffer.insert(it, entry);
                 inserted = true;
                 break;
-            } else if (it->get_packet_id() == pkt_id) {
-                delete[] entry.get_packet();
-                return;
-            }
+            } else if (it->get_packet_id() == pkt_id) return;
         }
         if (!inserted) seq_buffer.push_back(entry);
         return;

@@ -40,8 +40,8 @@ struct packet {
     char data[RDT_PKTSIZE];
 };
 
-#define WINDOW_SIZE 10
-#define RT_TIMEOUT 0.3
+#define WINDOW_SIZE 50
+#define RT_TIMEOUT 0.5
 
 enum FunctionCode
 {

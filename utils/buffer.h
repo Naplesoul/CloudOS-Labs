@@ -10,6 +10,8 @@
 #define _BUFFER_H_
 
 #include <deque>
+#include <memory>
+
 #include "../rdt_struct.h"
 #include "checksum.h"
 
@@ -26,7 +28,7 @@ private:
     uint8_t pld_size;
     FunctionCode fun_code;
     uint32_t pkt_id;
-    packet *pkt;
+    std::shared_ptr<packet> pkt;
 
 public:
     BufferEntry(bool _acked, uint32_t _pkt_id, FunctionCode _fun_code, uint8_t _pld_size, char *pld);
