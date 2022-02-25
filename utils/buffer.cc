@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 #include "buffer.h"
-#include "checksum.h"
 
 BufferEntry::BufferEntry(bool _acked, uint32_t _pkt_id, FunctionCode _fun_code, uint8_t _pld_size, char *pld):
     acked(_acked), pld_size(_pld_size), fun_code(_fun_code), pkt_id(_pkt_id), pkt(std::make_shared<packet>())
@@ -21,7 +20,6 @@ BufferEntry::BufferEntry(bool _acked, uint32_t _pkt_id, FunctionCode _fun_code, 
     *(uint8_t *)(pkt->data + PKTID_SIZE + FUNCODE_SIZE) = _pld_size;
     if (_pld_size > 0)
         memcpy(pkt->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, pld, _pld_size);
-    sign(pkt.get());
 }
 
 BufferEntry::BufferEntry(packet *_pkt)
@@ -52,6 +50,12 @@ FunctionCode BufferEntry::get_fun_code()
 uint8_t BufferEntry::get_pld_size()
 {
     return pld_size;
+}
+
+void BufferEntry::add_fun_code(FunctionCode code)
+{
+    fun_code = (FunctionCode)((uint8_t)fun_code | (uint8_t)code);
+    *(uint8_t *)(pkt->data + PKTID_SIZE) = fun_code;
 }
 
 

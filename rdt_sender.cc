@@ -54,7 +54,9 @@ static TimerArray timer_array(GetSimulationTime, Sender_StartTimer, Sender_StopT
 inline void send(size_t pkt_id)
 {
     fprintf(stdout, "At %.2fs: sender sending pkt %lu ...\n", GetSimulationTime(), pkt_id);
-    Sender_ToLowerLayer(buffer[pkt_id].get_packet());
+    packet *pkt = buffer[pkt_id].get_packet();
+    sign(pkt);
+    Sender_ToLowerLayer(pkt);
     timer_array.new_timer(pkt_id, RT_TIMEOUT);
 }
 
@@ -103,27 +105,38 @@ void Sender_Final()
 /* event handler, called when a message is passed from the upper layer at the 
    sender */
 void Sender_FromUpperLayer(struct message *msg)
-{
-    fprintf(stdout, "At %.2fs: sender received msg %lu ...\n", GetSimulationTime(), msg_count++);
+{   
+    if (msg->size <= 0) return;
+    
+    fprintf(stdout, "At %.2fs: sender received msg %lu, size = %d ...\n", GetSimulationTime(), msg_count++, msg->size);
     uint32_t pkt_num = msg->size / PLDSIZE_MAX;
     uint32_t pkt_id = buffer.size();
     
-    BufferEntry header_entry(false, pkt_id++, NEW_MSG, 0, nullptr);
-    buffer.push_back(header_entry);
+    // BufferEntry header_entry(false, pkt_id++, NEW_MSG, 0, nullptr);
+    // buffer.push_back(header_entry);
+
+    std::list<BufferEntry> new_pkts;
 
     for (uint32_t i = 0; i < pkt_num; ++i) {
         BufferEntry entry(false, pkt_id++, NORMAL_MSG, PLDSIZE_MAX, msg->data + PLDSIZE_MAX * i);
-        buffer.push_back(entry);
+        new_pkts.push_back(entry);
     }
 
     uint32_t remain_data_size = msg->size % PLDSIZE_MAX;
     if (remain_data_size != 0) {
         BufferEntry entry(false, pkt_id++, NORMAL_MSG, remain_data_size, msg->data + PLDSIZE_MAX * pkt_num);
-        buffer.push_back(entry);
+        new_pkts.push_back(entry);
     }
 
-    BufferEntry end_entry(false, pkt_id, END_MSG, 0, nullptr);
-    buffer.push_back(end_entry);
+    // BufferEntry end_entry(false, pkt_id, END_MSG, 0, nullptr);
+    // buffer.push_back(end_entry);
+
+    new_pkts.front().add_fun_code(NEW_MSG);
+    new_pkts.back().add_fun_code(END_MSG);
+
+    for (auto &pkt : new_pkts) {
+        buffer.push_back(pkt);
+    }
 
     fillup_window();
 }
@@ -133,7 +146,7 @@ void Sender_FromUpperLayer(struct message *msg)
 void Sender_FromLowerLayer(struct packet *pkt)
 {   
     if (!check(pkt)) {
-        fprintf(stdout, "At %.2fs: sender received a broken pkt ... ", GetSimulationTime());
+        fprintf(stdout, "At %.2fs: sender received a broken pkt ... \n", GetSimulationTime());
         return;
     }
 
@@ -143,7 +156,7 @@ void Sender_FromLowerLayer(struct packet *pkt)
     
     if (pkt_id < window_start_id || pkt_id > window_end_id) return;
 
-    if (fun_code == PKT_ACK) {
+    if (fun_code & PKT_ACK) {
         fprintf(stdout, "It's an ACK for pkt %u\n", pkt_id);
         buffer[pkt_id].acked = true;
         while (buffer.queue_size() > 0 && buffer.front().acked) {
@@ -153,9 +166,6 @@ void Sender_FromLowerLayer(struct packet *pkt)
         }
 
         fillup_window();
-    } else if (fun_code == PKT_LOST) {
-        fprintf(stdout, "It's an NAK\n");
-        timeout(pkt_id);
     } else {
         ASSERT(false);
     }

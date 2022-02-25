@@ -45,7 +45,7 @@ struct packet {
 
 enum FunctionCode
 {
-    PKT_ACK, PKT_LOST, NORMAL_MSG, NEW_MSG, END_MSG
+    PKT_ACK = 1, NORMAL_MSG = 2, NEW_MSG = 4, END_MSG = 8
 };
 
 #endif  /* _RDT_STRUCT_H_ */

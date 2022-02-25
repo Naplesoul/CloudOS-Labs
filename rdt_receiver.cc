@@ -35,7 +35,7 @@
 static BufferArray integrated_buffer;
 static std::list<BufferEntry> seq_buffer;
 static size_t msg_count;
-static size_t last_end_id = 0;
+static int64_t last_end_id = -1;
 
 /* receiver initialization, called once at the very beginning */
 void Receiver_Init()
@@ -69,7 +69,10 @@ void Receiver_FromLowerLayer(struct packet *pkt)
     BufferEntry entry(pkt);
     uint32_t pkt_id = entry.get_packet_id();
 
+    printf("At %.2fs: receiver received pkt %u\n", GetSimulationTime(), pkt_id);
+
     BufferEntry ack_entry(false, pkt_id, PKT_ACK, 0, nullptr);
+    sign(ack_entry.get_packet());
     Receiver_ToLowerLayer(ack_entry.get_packet());
 
     uint32_t next_integrated_id = integrated_buffer.size();
@@ -89,7 +92,7 @@ void Receiver_FromLowerLayer(struct packet *pkt)
         return;
     }
 
-    if (entry.get_fun_code() == END_MSG) {
+    if (entry.get_fun_code() & END_MSG) {
         last_end_id = pkt_id;
     }
     integrated_buffer.push_back(entry);
@@ -98,7 +101,7 @@ void Receiver_FromLowerLayer(struct packet *pkt)
     while (seq_buffer.size() > 0
         && seq_buffer.front().get_packet_id() == next_integrated_id) {
         
-        if (seq_buffer.front().get_fun_code() == END_MSG) {
+        if (seq_buffer.front().get_fun_code() & END_MSG) {
             last_end_id = seq_buffer.front().get_packet_id();
         }
 
@@ -112,30 +115,26 @@ void Receiver_FromLowerLayer(struct packet *pkt)
     if (last_end_id < integrated_buffer.front().get_packet_id()) return;
 
     for (auto it = integrated_buffer.begin(); it != integrated_buffer.end(); ++it) {
-        if (it->get_fun_code() == NEW_MSG) {
+        if (it->get_fun_code() & NEW_MSG) {
             message msg;
             uint32_t size = 0;
 
-            auto msg_end = it + 1;
-            if (msg_end == integrated_buffer.end()) break;
-
+            auto msg_end = it;
             bool msg_ended = false;
             for (; msg_end != integrated_buffer.end(); ++msg_end) {
-                if (msg_end->get_fun_code() == END_MSG) {
+                size += msg_end->get_pld_size();
+                if (msg_end->get_fun_code() & END_MSG) {
                     msg_ended = true;
                     break;
-                } else if (msg_end->get_fun_code() == NORMAL_MSG) {
-                    size += msg_end->get_pld_size();
-                } else {
-                    ASSERT(false);
                 }
             }
             if (!msg_ended) break;
+            ++msg_end;
 
             msg.data = new char[size];
             msg.size = size;
             size = 0;
-            for (auto msg_part = it + 1; msg_part != msg_end; ++msg_part) {
+            for (auto msg_part = it; msg_part != msg_end; ++msg_part) {
                 memcpy(msg.data + size, msg_part->get_packet()->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, msg_part->get_pld_size());
                 size += msg_part->get_pld_size();
             }
@@ -143,9 +142,9 @@ void Receiver_FromLowerLayer(struct packet *pkt)
             fprintf(stdout, "At %.2fs: receiver assembled msg %lu ...\n", GetSimulationTime(), msg_count++);
             Receiver_ToUpperLayer(&msg);
             delete[] msg.data;
-            it = msg_end;
+            it = msg_end - 1;
         }
     }
     
-    integrated_buffer.erase_before(last_end_id);
+    integrated_buffer.erase_before(last_end_id + 1);
 }

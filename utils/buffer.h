@@ -13,7 +13,6 @@
 #include <memory>
 
 #include "../rdt_struct.h"
-#include "checksum.h"
 
 #define PKTID_SIZE 4
 #define FUNCODE_SIZE 1
@@ -37,6 +36,7 @@ public:
     uint32_t get_packet_id();
     FunctionCode get_fun_code();
     uint8_t get_pld_size();
+    void add_fun_code(FunctionCode code);
 };
 
 class BufferArray
