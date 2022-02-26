@@ -111,32 +111,23 @@ void Sender_FromUpperLayer(struct message *msg)
     fprintf(stdout, "At %.2fs: sender received msg %lu, size = %d ...\n", GetSimulationTime(), msg_count++, msg->size);
     uint32_t pkt_num = msg->size / PLDSIZE_MAX;
     uint32_t pkt_id = buffer.size();
-    
-    // BufferEntry header_entry(false, pkt_id++, NEW_MSG, 0, nullptr);
-    // buffer.push_back(header_entry);
 
-    std::list<BufferEntry> new_pkts;
+    auto start_pkt = buffer.end();
+    --start_pkt;
 
     for (uint32_t i = 0; i < pkt_num; ++i) {
         BufferEntry entry(false, pkt_id++, NORMAL_MSG, PLDSIZE_MAX, msg->data + PLDSIZE_MAX * i);
-        new_pkts.push_back(entry);
+        buffer.push_back(entry);
     }
 
     uint32_t remain_data_size = msg->size % PLDSIZE_MAX;
     if (remain_data_size != 0) {
         BufferEntry entry(false, pkt_id++, NORMAL_MSG, remain_data_size, msg->data + PLDSIZE_MAX * pkt_num);
-        new_pkts.push_back(entry);
+        buffer.push_back(entry);
     }
 
-    // BufferEntry end_entry(false, pkt_id, END_MSG, 0, nullptr);
-    // buffer.push_back(end_entry);
-
-    new_pkts.front().add_fun_code(NEW_MSG);
-    new_pkts.back().add_fun_code(END_MSG);
-
-    for (auto &pkt : new_pkts) {
-        buffer.push_back(pkt);
-    }
+    (++start_pkt)->add_fun_code(NEW_MSG);
+    buffer.back().add_fun_code(END_MSG);
 
     fillup_window();
 }

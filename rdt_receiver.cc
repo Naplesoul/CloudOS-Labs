@@ -14,8 +14,8 @@
  *       situations.  In this implementation, the packet format is laid out as 
  *       the following:
  *       
- *       |<-  1 byte  ->|<-             the rest            ->|
- *       | payload size |<-             payload             ->|
+ *       |<-  4 byte  ->|<-  1  byte  ->|<-  1 byte  ->|<- the rest (max 120 byte) ->|<-  2 byte  ->|
+ *       |  packet  ID  | function code | payload size |<-         payload         ->|   checksum   |
  *
  *       The first byte of each packet indicates the size of the payload
  *       (excluding this single-byte header)
