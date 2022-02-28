@@ -3,7 +3,7 @@
  * @Autor: Unknown
  * @Date: Unknown
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-23 00:53:57
+ * @LastEditTime: 2022-02-28 00:30:45
  */
 
 /*
@@ -115,6 +115,7 @@ void Sender_FromUpperLayer(struct message *msg)
     auto start_pkt = buffer.end();
     --start_pkt;
 
+    // cut msg into several packets
     for (uint32_t i = 0; i < pkt_num; ++i) {
         BufferEntry entry(false, pkt_id++, NORMAL_MSG, PLDSIZE_MAX, msg->data + PLDSIZE_MAX * i);
         buffer.push_back(entry);
@@ -126,6 +127,7 @@ void Sender_FromUpperLayer(struct message *msg)
         buffer.push_back(entry);
     }
 
+    // tag the first with NEW_MSG bit and the last with END_MSG bit
     (++start_pkt)->add_fun_code(NEW_MSG);
     buffer.back().add_fun_code(END_MSG);
 

@@ -3,7 +3,7 @@
  * @Autor: Unknown
  * @Date: Unknown
  * @LastEditors: Weihang Shen
- * @LastEditTime: 2022-02-23 12:00:33
+ * @LastEditTime: 2022-02-28 00:28:50
  */
 
 /*
@@ -71,6 +71,7 @@ void Receiver_FromLowerLayer(struct packet *pkt)
 
     printf("At %.2fs: receiver received pkt %u\n", GetSimulationTime(), pkt_id);
 
+    // send back ACK
     BufferEntry ack_entry(false, pkt_id, PKT_ACK, 0, nullptr);
     sign(ack_entry.get_packet());
     Receiver_ToLowerLayer(ack_entry.get_packet());
@@ -80,6 +81,7 @@ void Receiver_FromLowerLayer(struct packet *pkt)
     if (pkt_id < next_integrated_id) return;
 
     if (pkt_id != next_integrated_id) {
+        // add into seq_buffer ordered by pkt_id
         bool inserted = false;
         for (auto it = seq_buffer.begin(); it != seq_buffer.end(); ++it) {
             if (it->get_packet_id() > pkt_id) {
@@ -92,12 +94,15 @@ void Receiver_FromLowerLayer(struct packet *pkt)
         return;
     }
 
+    // pkt_id is continuous between integrated_buffer and seq_buffer
+    // update last_end_id to quickly judge if a msg is complete
     if (entry.get_fun_code() & END_MSG) {
         last_end_id = pkt_id;
     }
     integrated_buffer.push_back(entry);
     next_integrated_id++;
 
+    // move continuous packets from seq_buffer to integrated_buffer
     while (seq_buffer.size() > 0
         && seq_buffer.front().get_packet_id() == next_integrated_id) {
         
@@ -114,11 +119,13 @@ void Receiver_FromLowerLayer(struct packet *pkt)
 
     if (last_end_id < integrated_buffer.front().get_packet_id()) return;
 
+    // assemble msg
     for (auto it = integrated_buffer.begin(); it != integrated_buffer.end(); ++it) {
         if (it->get_fun_code() & NEW_MSG) {
             message msg;
             uint32_t size = 0;
 
+            // search for the end of the msg and calculate total size
             auto msg_end = it;
             bool msg_ended = false;
             for (; msg_end != integrated_buffer.end(); ++msg_end) {
@@ -133,6 +140,8 @@ void Receiver_FromLowerLayer(struct packet *pkt)
 
             msg.data = new char[size];
             msg.size = size;
+
+            // copy data from packets into msg.data[]
             size = 0;
             for (auto msg_part = it; msg_part != msg_end; ++msg_part) {
                 memcpy(msg.data + size, msg_part->get_packet()->data + PKTID_SIZE + FUNCODE_SIZE + PLDSIZE_SIZE, msg_part->get_pld_size());
@@ -146,5 +155,6 @@ void Receiver_FromLowerLayer(struct packet *pkt)
         }
     }
     
+    // delete assembled packets
     integrated_buffer.erase_before(last_end_id + 1);
 }
