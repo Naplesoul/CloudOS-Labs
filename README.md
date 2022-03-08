@@ -53,7 +53,7 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 
 #### Q4: Describe the data structure of `rte_mbuf`.
 
-![rte_mbuf](/Users/shen/Projects/Homework/云操作系统设计与实践/CloudOS-Labs/README.assets/rte_mbuf.png)
+![rte_mbuf](https://raw.githubusercontent.com/Naplesoul/CloudOS-Labs/Lab2-DPDK/README.assets/rte_mbuf.png?token=GHSAT0AAAAAABSFGSRGACJ5D4YDRZL2N4V6YRHJLUQ)
 
 <center>图1 rte_mbuf结构（图源《深入浅出DPDK》图6-8）</center>
 
@@ -95,7 +95,7 @@ sudo ./build/dpdk_udp
 
 #### Results
 
-![wireshark](/Users/shen/Projects/Homework/云操作系统设计与实践/CloudOS-Labs/README.assets/wireshark.png)
+![wireshark](https://raw.githubusercontent.com/Naplesoul/CloudOS-Labs/Lab2-DPDK/README.assets/wireshark.png?token=GHSAT0AAAAAABSFGSRHWI5Y73DJFEFFSYDUYRHJL7Q)
 
 <center>图2 抓包截图</center>
 
