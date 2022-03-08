@@ -46,7 +46,7 @@ fill_udp_packet(struct rte_mbuf *pkt, char *data, size_t length)
 	size_t ipv4_pkt_len = udp_pkt_len + sizeof(struct rte_ipv4_hdr);
 	size_t ether_pkt_len = ipv4_pkt_len + sizeof(struct rte_ether_hdr);
 
-	pkt->data_len = ether_pkt_len;
+	rte_pktmbuf_append(pkt, ether_pkt_len);
 
 	// fill ether header
 	ether_hdr->s_addr = ether_src_addr;
