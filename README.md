@@ -12,6 +12,8 @@
 
 大页可以减少程序所使用的页表项，减少TLB miss的次数，从而加速地址的翻译。
 
+使用大页也可以减少页表的级数，可以提高查页表的效率。
+
 
 
 #### Q2: Take `examples/helloworld` as an example, describe the execution ﬂow of DPDK programs?
@@ -53,7 +55,7 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 
 #### Q4: Describe the data structure of `rte_mbuf`.
 
-![rte_mbuf](https://raw.githubusercontent.com/Naplesoul/CloudOS-Labs/Lab2-DPDK/README.assets/rte_mbuf.png?token=GHSAT0AAAAAABSFGSRGACJ5D4YDRZL2N4V6YRHJLUQ)
+![rte_mbuf](README.assets/rte_mbuf-7104035.png)![rte_mbuf]()
 
 <center>图1 rte_mbuf结构（图源《深入浅出DPDK》图6-8）</center>
 
@@ -95,7 +97,7 @@ sudo ./build/dpdk_udp
 
 #### Results
 
-![wireshark](https://raw.githubusercontent.com/Naplesoul/CloudOS-Labs/Lab2-DPDK/README.assets/wireshark.png?token=GHSAT0AAAAAABSFGSRHWI5Y73DJFEFFSYDUYRHJL7Q)
+![wireshark](README.assets/wireshark-7104023.png)![wireshark]()
 
 <center>图2 抓包截图</center>
 
