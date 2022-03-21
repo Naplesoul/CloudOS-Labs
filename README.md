@@ -55,7 +55,7 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 
 #### Q4: Describe the data structure of `rte_mbuf`.
 
-![rte_mbuf](README.assets/rte_mbuf-7104035.png)![rte_mbuf]()
+![rte_mbuf](README.assets/rte_mbuf.png)![rte_mbuf]()
 
 <center>图1 rte_mbuf结构（图源《深入浅出DPDK》图6-8）</center>
 
@@ -97,7 +97,7 @@ sudo ./build/dpdk_udp
 
 #### Results
 
-![wireshark](README.assets/wireshark-7104023.png)![wireshark]()
+![wireshark](README.assets/wireshark.png)![wireshark]()
 
 <center>图2 抓包截图</center>
 
